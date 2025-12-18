@@ -1,8 +1,0 @@
-# This program shows the use of capabilities, as the function made in this code
-# wouldn't be able to operate if it didn't state that it need the secret write capability
-def Void capability_test_function(String text) requires CAPABILITY_SECRET_WRITE {
-    Secret[String] secret_text = set_secret(text)
-}
-
-String test_text = "text to test the capabilities of this function I make."
-capability_test_function(test_text)

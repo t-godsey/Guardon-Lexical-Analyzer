@@ -1,0 +1,81 @@
+# Guardon Database Access Example
+# Demonstrates role-based access, tainted input handling, and secure data patterns
+
+Role ADMIN
+Role FINANCE_MANAGER
+Role DATA_ANALYST
+
+User alice = new User
+alice.give_role([ADMIN])
+User bob = new User
+bob.give_role([FINANCE_MANAGER])
+User charlie = new User
+charlie.give_role([DATA_ANALYST])
+
+Key[AES256] db_key = generate_key()
+
+# Database Query Functions
+# Admin-only: Retrieve all employee salaries
+def Secret[String] get_all_salaries()
+  requires CAPABILITY_FS_READ, CAPABILITY_SECRET_READ, ADMIN {
+    Secret[String] query = set_secret("SELECT emp_id, salary FROM employees")
+    return db_query(query)
+}
+
+
+# Finance manager: Get specific employee salary (prevents SQL injection via sanitization)
+def Secret[String] get_employee_salary(Tainted[String] emp_id)
+  requires CAPABILITY_FS_READ, CAPABILITY_SECRET_READ, FINANCE_MANAGER {
+    String safe_id = sanitize(emp_id)
+    Secret[String] query = set_secret("SELECT salary FROM employees WHERE emp_id = " + safe_id)
+    Secret[String] result = db_query(query)
+
+
+    # Encrypt result before returning
+    Nonce nonce = generate_nonce(AES256)
+    return encrypt(result, db_key)
+}
+
+
+# Data analyst: Get aggregated statistics only (no individual data)
+def Public[String] get_salary_statistics()
+  requires CAPABILITY_FS_READ, DATA_ANALYST {
+    Public[String] query = "SELECT AVG(salary), MIN(salary), MAX(salary) FROM employees"
+    return db_query(query)
+}
+
+
+# Admin Functions: Role Management
+def Void grant_role(User target_user, Role role)
+  requires ADMIN {
+    target_user.give_role([role])
+}
+
+
+def Void revoke_role(User target_user, Role role)
+  requires ADMIN {
+    target_user.remove_role([role])
+}
+
+
+# Main Program
+# Alice (ADMIN) retrieves all salaries
+Secret[String] all_salaries = get_all_salaries()
+print("Admin retrieved all salaries (encrypted)")
+
+
+# Bob (FINANCE_MANAGER) queries specific employee
+Tainted[String] emp_lookup = input()  # Untrusted user input
+Secret[String] bobs_result = get_employee_salary(emp_lookup)
+print("Finance manager retrieved employee salary (encrypted)")
+
+
+# Charlie (DATA_ANALYST) gets aggregated stats only
+Public[String] stats = get_salary_statistics()
+print("Data analyst retrieved statistics:")
+print(stats)
+
+
+# Grant new role to analyst (admin-only)
+grant_role(charlie, FINANCE_MANAGER)
+print("Role granted to Charlie")
