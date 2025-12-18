@@ -1,0 +1,23 @@
+# Example program acting as an edge case
+Tainted[Secret[String]] user_input      = input()
+
+
+
+
+
+
+Int user = 1 #named user to mimic User KW, comment to test if it works
+Int role = 2 #named user to mimic Role KW, another comment because why not
+if ((user        + (role)) == 3) {
+    user_input = sanitize(user_input) # sanitizing input
+
+
+
+
+   
+    Secret[string] to_use_text = safe_text.get_secret()
+
+
+
+
+}

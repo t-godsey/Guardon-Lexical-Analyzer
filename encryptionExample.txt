@@ -1,0 +1,34 @@
+# Define roles used by the system
+Role ADMIN
+Role USER
+
+# Create users
+User alice = new User
+alice.give_role([USER])
+User bob = new User
+bob.give_role([ADMIN])
+
+# Generate an encryption key
+Key[AES256] aes_key = generate_key()
+
+# Read untrusted input
+Tainted[String] user_input = input()
+
+# Sanitize input before use
+String safe_message = sanitize(user_input)
+
+# Encrypt sanitized data
+def Secret[String] store_message(Public[String] msg, Key[AES256] key) 
+  requires CAPABILITY_KEY_USE, CAPABILITY_SECRET_WRITE, CAPABILITY_RANDOM {
+    return encrypt(msg, key)
+  }
+
+Secret[String] encrypted_message = store_message(safe_message, aes_key)
+
+# Decrypt message (admin-only operation)
+def Public[String] read_message(Secret[String] enc, Key[AES256] key) 
+  requires CAPABILITY_KEY_USE, CAPABILITY_SECRET_READ, ADMIN {
+    return decrypt(enc, key)
+  }
+
+Public[String] original_message = read_message(encrypted_message, aes_key)
